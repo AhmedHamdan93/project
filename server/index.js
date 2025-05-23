@@ -6,17 +6,13 @@ import mongoose from 'mongoose';
 import MongoStore from 'connect-mongo';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
-// import { MongoClient, ServerApiVersion } from 'mongodb';
+import taskRoutes from './routes/tasks.js';
 
 // Load environment variables
 dotenv.config({path:'../.env'});
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-
-console.log('port',PORT)
-console.log('mongo',process.env.MONGODB_URI)
-
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -50,6 +46,7 @@ app.use(session({
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // Root route
 app.get('/', (req, res) => {

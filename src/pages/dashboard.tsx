@@ -1,180 +1,235 @@
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/auth-provider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, Users, Calendar, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { CalendarIcon, PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { Task, getTasks, createTask, updateTask, deleteTask } from '@/lib/tasks';
+import { toast } from 'sonner';
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  if (!user) {
-    return <div>Loading...</div>;
-  }
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    status: 'pending',
+    dueDate: '',
+  });
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      const tasks = await getTasks();
+      setTasks(tasks);
+    } catch (error) {
+      toast.error('Failed to load tasks');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (selectedTask) {
+        await updateTask(selectedTask._id, formData);
+        toast.success('Task updated successfully');
+      } else {
+        await createTask(formData);
+        toast.success('Task created successfully');
+      }
+      loadTasks();
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      toast.error(selectedTask ? 'Failed to update task' : 'Failed to create task');
+    }
+  };
+
+  const handleDelete = async (taskId: string) => {
+    try {
+      await deleteTask(taskId);
+      toast.success('Task deleted successfully');
+      loadTasks();
+    } catch (error) {
+      toast.error('Failed to delete task');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      status: 'pending',
+      dueDate: '',
+    });
+    setSelectedTask(null);
+  };
+
+  const openEditDialog = (task: Task) => {
+    setSelectedTask(task);
+    setFormData({
+      title: task.title,
+      description: task.description || '',
+      status: task.status,
+      dueDate: task.dueDate || '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  if (!user) return null;
 
   return (
-    <div className="flex flex-col space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {user.name}
-        </p>
-      </header>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Tasks</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetForm}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Task
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{selectedTask ? 'Edit Task' : 'Add Task'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Title</label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Task title"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Task description"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in progress">In Progress</SelectItem>
+                    <SelectItem value="done">Done</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Due Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.dueDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.dueDate ? format(new Date(formData.dueDate), 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
+                      onSelect={(date) => setFormData({ ...formData, dueDate: date ? date.toISOString() : '' })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button type="submit" className="w-full">
+                {selectedTask ? 'Update Task' : 'Create Task'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview" className="flex items-center">
-            <Activity className="mr-2 h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center">
-            <Users className="mr-2 h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center">
-            <Calendar className="mr-2 h-4 w-4" />
-            Reports
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="flex items-center">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <DashboardCard
-              title="Users"
-              description="Total registered users"
-              value="1,234"
-              icon={<Users className="h-5 w-5 text-muted-foreground" />}
-            />
-            <DashboardCard
-              title="Active Sessions"
-              description="Current active user sessions"
-              value="567"
-              icon={<Activity className="h-5 w-5 text-muted-foreground" />}
-            />
-            <DashboardCard
-              title="New Registrations"
-              description="Users registered today"
-              value="12"
-              icon={<Users className="h-5 w-5 text-muted-foreground" />}
-            />
-          </div>
-          
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card className="col-span-1">
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Your recent authentication events</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        i === 1 ? "bg-green-500" : "bg-blue-500"
-                      )} />
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium">
-                          {i === 1 ? "Login successful" : `Activity ${i}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date().toLocaleString()}
-                        </p>
+      <div className="grid gap-4 md:grid-cols-3">
+        {['pending', 'in progress', 'done'].map((status) => (
+          <Card key={status}>
+            <CardHeader>
+              <CardTitle className="capitalize">{status}</CardTitle>
+              <CardDescription>
+                {tasks.filter((task) => task.status === status).length} tasks
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {tasks
+                  .filter((task) => task.status === status)
+                  .map((task) => (
+                    <div
+                      key={task._id}
+                      className="rounded-lg border p-4 space-y-2"
+                    >
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-medium">{task.title}</h3>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(task)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(task._id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
+                      {task.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {task.description}
+                        </p>
+                      )}
+                      {task.dueDate && (
+                        <p className="text-sm text-muted-foreground">
+                          Due: {format(new Date(task.dueDate), 'PPP')}
+                        </p>
+                      )}
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="col-span-1">
-              <CardHeader>
-                <CardTitle>Security Status</CardTitle>
-                <CardDescription>Your account security information</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Password Strength</span>
-                    <span className="text-sm font-medium text-green-500">Strong</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Last Password Change</span>
-                    <span className="text-sm font-medium">{new Date().toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Active Sessions</span>
-                    <span className="text-sm font-medium">1</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="analytics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics</CardTitle>
-              <CardDescription>User analytics and statistics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Analytics content would go here.</p>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
-        
-        <TabsContent value="reports" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Reports</CardTitle>
-              <CardDescription>Generated reports and data</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Reports content would go here.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Settings</CardTitle>
-              <CardDescription>Manage your dashboard preferences</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Settings content would go here.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        ))}
+      </div>
     </div>
-  );
-}
-
-interface DashboardCardProps {
-  title: string;
-  description: string;
-  value: string;
-  icon: React.ReactNode;
-}
-
-function DashboardCard({ title, description, value, icon }: DashboardCardProps) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="space-y-1">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </div>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
   );
 }
