@@ -4,7 +4,8 @@ import { isAuthenticated } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get user profile (protected route)
+
+
 router.get('/profile', isAuthenticated, async (req, res) => {
   try {
     const user = await User.findById(req.session.userId).select('-password');
@@ -29,7 +30,8 @@ router.get('/profile', isAuthenticated, async (req, res) => {
   }
 });
 
-// Update user profile (protected route)
+
+
 router.put('/profile', isAuthenticated, async (req, res) => {
   try {
     const { name } = req.body;

@@ -9,7 +9,8 @@ const API_URL = 'http://localhost:5000/api';
 // Configure axios
 axios.defaults.withCredentials = true;
 
-// Function to check authentication status
+
+
 export async function checkAuth() {
   try {
     const response = await axios.get(`${API_URL}/auth/check`);
@@ -19,7 +20,7 @@ export async function checkAuth() {
   }
 }
 
-// Protected route loader
+
 export function protectedLoader({ context, navigate }: LoaderFunctionArgs) {
   if (!context?.isAuthenticated) {
     throw navigate({
@@ -32,7 +33,8 @@ export function protectedLoader({ context, navigate }: LoaderFunctionArgs) {
   return null;
 }
 
-// Login function
+
+
 export async function login(email: string, password: string) {
   const response = await axios.post(`${API_URL}/auth/login`, {
     email,
@@ -41,7 +43,7 @@ export async function login(email: string, password: string) {
   return response.data;
 }
 
-// Register function
+
 export async function register(name: string, email: string, password: string) {
   const response = await axios.post(`${API_URL}/auth/register`, {
     name,
@@ -51,19 +53,22 @@ export async function register(name: string, email: string, password: string) {
   return response.data;
 }
 
-// Logout function
+
+
 export async function logout() {
   const response = await axios.post(`${API_URL}/auth/logout`);
   return response.data;
 }
 
-// Get user profile
+
+
 export async function getUserProfile() {
   const response = await axios.get(`${API_URL}/user/profile`);
   return response.data.user;
 }
 
-// Update user profile
+
+
 export async function updateUserProfile(data: { name: string }) {
   const response = await axios.put(`${API_URL}/user/profile`, data);
   return response.data;

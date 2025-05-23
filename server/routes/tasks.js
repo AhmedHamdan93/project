@@ -4,7 +4,8 @@ import { isAuthenticated } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get all tasks for the authenticated user
+
+
 router.get('/', isAuthenticated, async (req, res) => {
   try {
     const tasks = await Task.find({ userId: req.session.userId })
@@ -23,7 +24,8 @@ router.get('/', isAuthenticated, async (req, res) => {
   }
 });
 
-// Create a new task
+
+
 router.post('/', isAuthenticated, async (req, res) => {
   try {
     const { title, description, status, dueDate } = req.body;
@@ -52,7 +54,8 @@ router.post('/', isAuthenticated, async (req, res) => {
   }
 });
 
-// Update a task
+
+
 router.put('/:id', isAuthenticated, async (req, res) => {
   try {
     const { title, description, status, dueDate } = req.body;
@@ -91,7 +94,8 @@ router.put('/:id', isAuthenticated, async (req, res) => {
   }
 });
 
-// Delete a task
+
+
 router.delete('/:id', isAuthenticated, async (req, res) => {
   try {
     const taskId = req.params.id;

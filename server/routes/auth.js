@@ -3,12 +3,14 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
-// Register a new user
+
+
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
     
-    // Check if user already exists
+
+    
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ 
@@ -17,16 +19,18 @@ router.post('/register', async (req, res) => {
       });
     }
     
-    // Create new user
+
+    
     const user = new User({
       name,
       email,
-      password, // Will be hashed by pre-save hook
+      password,
     });
     
     await user.save();
     
-    // Don't return password in response
+
+    
     const userResponse = {
       id: user._id,
       name: user.name,
@@ -47,12 +51,14 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login user
+
+
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Find user by email
+
+    
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
@@ -61,7 +67,8 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // Compare passwords
+
+    
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
@@ -70,10 +77,12 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // Save user ID in session
+
+    
     req.session.userId = user._id;
     
-    // Return user data (excluding password)
+
+    
     const userResponse = {
       id: user._id,
       name: user.name,
@@ -94,7 +103,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Logout user
+
+
 router.post('/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) {
@@ -112,7 +122,8 @@ router.post('/logout', (req, res) => {
   });
 });
 
-// Check if user is authenticated
+
+
 router.get('/check', (req, res) => {
   if (req.session.userId) {
     return res.status(200).json({

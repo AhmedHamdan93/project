@@ -50,7 +50,7 @@ export function LoginPage() {
     
     try {
       await login(data.email, data.password);
-      // Navigate is handled in the auth context
+      
     } catch (error: any) {
       setError(error.response?.data?.message || 'An error occurred during login');
     } finally {
